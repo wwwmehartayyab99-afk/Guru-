@@ -2,8 +2,6 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# --- 1. CONFIGURATION ---
-# Streamlit Secrets use karna behtar hai, lekin agar aap direct key use kar rahe hain to yahan likhein
 # --- 1. CONFIGURATION (Updated for Security) ---
 if "GOOGLE_API_KEY" in st.secrets:
     GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
