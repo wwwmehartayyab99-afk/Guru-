@@ -4,13 +4,14 @@ from PIL import Image
 
 # --- 1. CONFIGURATION ---
 # Streamlit Secrets use karna behtar hai, lekin agar aap direct key use kar rahe hain to yahan likhein
-GOOGLE_API_KEY = "AIzaSyDRLw82kbZmh5HdaXLKuo-UejHcngqWuRc" 
-
-try:
+# --- 1. CONFIGURATION (Updated for Security) ---
+if "GOOGLE_API_KEY" in st.secrets:
+    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=GOOGLE_API_KEY)
-except:
-    st.error("API Key configure nahi ho saki.")
-
+else:
+    st.error("Secrets mein API Key nahi mili! Settings check karein.")
+    st.stop()
+    
 # --- 2. MODEL SELECTION (Fixed Error Handling) ---
 @st.cache_resource
 def get_best_model():
