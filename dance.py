@@ -86,13 +86,13 @@ if prompt := st.chat_input("GURU se kuch puchiye..."):
             # Check if it's the first message to handle "Assalam-o-Alaikum"
             # History check: user ka message append ho chuka hai, agar count 1 hai to ye pehla sawaal hai
             if len(st.session_state.messages) <= 1:
-                greeting_instr = "Hamesha 'Assalam-o-Alaikum Ksy hai ap khana kha k aye hai ya gr jaa ky khaye gy' se baat shuru karein."
+                greeting_instr = "Hamesha 'Assalam-o-Alaikum How are You How can i Help you' se baat shuru karein."
             else:
                 greeting_instr = "Ab dubara Salam mat karein (already greeted), seedha jawab dein."
 
             model = genai.GenerativeModel(
                 model_name=best_model_name,
-                system_instruction=f"Aapka naam GURU hai. Aap ek aqalmand ustad hain. {greeting_instr} Agar koi puche 'Who are you' to kahein 'Main GURU hoon Mujy Tayyab ny bnaya hai'."
+                system_instruction=f"Aapka naam GURU hai. Aap ek bhtreen ustad hain. {greeting_instr} Agar koi puche 'Who are you' to kahein 'Main GURU hoon Mujy Tayyab ny bnaya hai'."
             )
             
             st.write("**GURU:**")
@@ -114,7 +114,7 @@ if prompt := st.chat_input("GURU se kuch puchiye..."):
                     st.warning(f"Key limit reached. Switching to Key #{st.session_state.key_index + 1}...")
                     st.rerun()
                 else:
-                    st.error("Sari API Keys ki limit khatam ho chuki hai!")
+                    st.error("Please wait After some time you can ask me anything!")
             else:
-                st.error(f"GURU ko masla aya: {e}")
+                st.error(f"Some error found in Guru Coding: {e}")
         
