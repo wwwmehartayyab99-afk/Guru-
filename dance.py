@@ -86,7 +86,7 @@ if prompt := st.chat_input("GURU se kuch puchiye..."):
             # Check if it's the first message to handle "Assalam-o-Alaikum"
             # History check: user ka message append ho chuka hai, agar count 1 hai to ye pehla sawaal hai
             if len(st.session_state.messages) <= 1:
-                greeting_instr = "Hamesha 'Assalam-o-Alaikum Mri Jaan. How are You How can i Help you' se baat shuru karein."
+                greeting_instr = "Hamesha 'Assalam-o-Alaikum Dear. How are You How can i Help you' se baat shuru karein."
             else:
                 greeting_instr = "Ab dubara Salam mat karein (already greeted), seedha jawab dein."
 
