@@ -1,29 +1,18 @@
+
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 import time
 from datetime import datetime
 
-# --- 1. CONFIGURATION (Multi-API Key Setup) ---
+# --- 1. CONFIGURATION (Updated for Security) ---
 if "GOOGLE_API_KEY" in st.secrets:
     GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=GOOGLE_API_KEY)
 else:
-    st.error("Secrets mein API Key nahi mili! Settings check karein.")
+    st.error("Systematic error.")
     st.stop()
-
-if "key_index" not in st.session_state:
-    st.session_state.key_index = 0
-
-if "user_name" not in st.session_state:
-    st.session_state.user_name = None
-
-def configure_next_key():
-    st.session_state.key_index = (st.session_state.key_index + 1) % len(API_KEYS)
-    genai.configure(api_key=API_KEYS[st.session_state.key_index])
-
-genai.configure(api_key=API_KEYS[st.session_state.key_index])
-
+    
 # --- 2. MODEL SELECTION ---
 @st.cache_resource
 def get_best_model():
@@ -144,87 +133,4 @@ else:
                
                 if not success:
                     st.error("GURU REST KRNY LAGA.")
-return available_models[0] if available_models else None
-    except Exception:
-        return None
-
-best_model_name = get_best_model()
-
-# --- 3. PAGE UI ---
-st.set_page_config(page_title="GURU AI", page_icon="⭐")
-st.title("⭐ GURU AI")
-
-# --- 4. SIDEBAR ---
-with st.sidebar:
-    st.header("GURU Settings")
-    uploaded_file = st.file_uploader("Koi photo upload karein (Optional)", type=['png', 'jpg', 'jpeg'])
     
-    if uploaded_file:
-        st.image(uploaded_file, caption="Selected Image", use_container_width=True)
-    
-    if st.button("Clear Chat History"):
-        st.session_state.messages = []
-        st.session_state.key_index = 0 # Reset key to first one
-        st.rerun()
-    
-    st.write("---")
-    if best_model_name:
-        st.success(f"GURU Online ({best_model_name.split('/')[-1]})")
-        st.info(f"API Key #{st.session_state.key_index + 1} active")
-    else:
-        st.error("GURU Offline hai.")
-
-# --- 5. CHAT MEMORY ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for message in st.session_state.messages:
-    name = "GURU" if message["role"] == "assistant" else "Tayyab"
-    with st.chat_message(message["role"]):
-        st.markdown(f"**{name}:** {message['content']}")
-
-# --- 6. CHAT LOGIC ---
-if prompt := st.chat_input("GURU se kuch puchiye..."):
-    
-    # User ka message save aur show karein
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(f"**Tayyab:** {prompt}")
-
-    with st.chat_message("assistant"):
-        try:
-            # Check if it's the first message to handle "Assalam-o-Alaikum"
-            # History check: user ka message append ho chuka hai, agar count 1 hai to ye pehla sawaal hai
-            if len(st.session_state.messages) <= 1:
-                greeting_instr = "Hamesha 'Assalam-o-Alaikum Dear. How are You How can i Help you' se baat shuru karein."
-            else:
-                greeting_instr = "Ab dubara Salam mat karein (already greeted), seedha jawab dein."
-
-            model = genai.GenerativeModel(
-                model_name=best_model_name,
-                system_instruction=f"Aapka naam GURU hai. Aap ek bhtreen ustad hain. {greeting_instr} Agar koi puche 'Who are you' to kahein 'Main GURU hoon Mujy Tayyab ny bnaya hai'."
-            )
-            
-            st.write("**GURU:**")
-            
-            if uploaded_file:
-                img = Image.open(uploaded_file)
-                response = model.generate_content([prompt, img], stream=True)
-            else:
-                response = model.generate_content(prompt, stream=True)
-            
-            full_response = st.write_stream((chunk.text for chunk in response))
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-        except Exception as e:
-            # Key Switch Logic if limit reached
-            if "429" in str(e) or "quota" in str(e).lower():
-                if st.session_state.key_index < len(all_keys) - 1:
-                    st.session_state.key_index += 1
-                    st.warning(f"Key limit reached. Switching to Key #{st.session_state.key_index + 1}...")
-                    st.rerun()
-                else:
-                    st.error("Please wait After some time you can ask me anything!")
-            else:
-                st.error(f"Some error found in Guru Coding: {e}")
-        
