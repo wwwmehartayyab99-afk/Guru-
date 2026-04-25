@@ -6,7 +6,7 @@ from datetime import datetime
 
 # --- 1. CONFIGURATION (Multi-API Key Setup) ---
 if "API_KEYS" in st.secrets:
-    GOOGLE_API_KEY = st.secrets["API_KEYS"]
+    API_KEYS = st.secrets["API_KEYS"]
     genai.configure(api_key=API_KEYS)
 else:
     st.error("Secrets mein API Key nahi mili! Settings check karein.")
