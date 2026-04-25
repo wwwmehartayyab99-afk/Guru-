@@ -5,10 +5,12 @@ import time
 from datetime import datetime
 
 # --- 1. CONFIGURATION (Multi-API Key Setup) ---
-API_KEYS = [
-    "AIzaSyAGsnekvxGvWehJplwjqqKEj5kERx3FkiY",
-    "AIzaSyATTHku1ovgUftYHldWhwhHQRmRLsk2xzw"
-]
+if "GOOGLE_API_KEY" in st.secrets:
+    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=GOOGLE_API_KEY)
+else:
+    st.error("Secrets mein API Key nahi mili! Settings check karein.")
+    st.stop()
 
 if "key_index" not in st.session_state:
     st.session_state.key_index = 0
