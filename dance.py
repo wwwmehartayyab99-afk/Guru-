@@ -5,29 +5,20 @@ import time
 from datetime import datetime
 
 # --- 1. CONFIGURATION (Multi-API Key Setup) ---
-if "API_KEYS" in st.secrets:
-    API_KEYS = st.secrets["API_KEYS"]
-else:
-    st.error("Secrets mein 'API_KEYS' ki list nahi mili!")
-    st.stop()
+API_KEYS= st.secrets["API_KEYS"]
 
-# Key Index ko manage karne ke liye session state
+genai.configure(api_key=API_KEYS)
 if "key_index" not in st.session_state:
     st.session_state.key_index = 0
 
-def get_current_key():
-    return API_KEYS[st.session_state.key_index]
+if "user_name" not in st.session_state:
+    st.session_state.user_name = None
 
-# Initial Configuration
-genai.configure(api_key=get_current_key())
-
-def rotate_key():
-    """Agli key par shift hone ka function"""
+def configure_next_key():
     st.session_state.key_index = (st.session_state.key_index + 1) % len(API_KEYS)
-    genai.configure(api_key=get_current_key())
-    return get_current_key()
+    genai.configure(api_key=API_KEYS[st.session_state.key_index])
 
-
+genai.configure(api_key=API_KEYS[st.session_state.key_index])
 
 # --- 2. MODEL SELECTION ---
 @st.cache_resource
