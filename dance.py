@@ -13,7 +13,7 @@ if "key_index" not in st.session_state:
 if "user_name" not in st.session_state:
     st.session_state.user_name = None
 
-# Track if greeting has been sent
+# Logic to track if greeting has been sent
 if "has_greeted" not in st.session_state:
     st.session_state.has_greeted = False
 
@@ -89,20 +89,21 @@ else:
     else:
         today_date = datetime.now().strftime("%A, %d %B %Y")
         
-        # --- THE LIVE SEARCH LINE ---
-        tools_config = [{"google_search_retrieval": {}}]
+        # FIXED: Correct tool name to avoid 400 error
+        tools_config = [{"google_search": {}}]
 
         model = genai.GenerativeModel(
             model_name=best_model_name,
-            tools=tools_config, # This enables live Google Search
+            tools=tools_config, 
             system_instruction=f"""
             Your name is Apna AI, created by Tayyab.
-            Current Date: {today_date}.
+            CRITICAL: Today's date is {today_date}.
             Aap ek aqalmand ustad hain. Aap {st.session_state.user_name} se baat kar rahe hain. 
             RULES:
-            1. Use Google Search to find current world leaders or news for ANY country.
-            2. Language: Mix of Urdu/English (Roman Urdu).
-            3. Do NOT start with 'Assalam-o-Alaikum' yourself.
+            1. Use Google Search tool to find current world leaders or news for ANY country.
+            2. When you find the info, give a direct answer. Don't say "I don't have future data."
+            3. Language: Mix of Urdu/English (Roman Urdu).
+            4. Do NOT start with 'Assalam-o-Alaikum' yourself.
             """
         )
 
@@ -111,7 +112,7 @@ else:
             final_prompt = prompt
             if not st.session_state.has_greeted:
                 # Forces greeting on the first message only
-                final_prompt = f"Start with 'Assalam-o-Alaikum {st.session_state.user_name}!' and then answer: {prompt}"
+                final_prompt = f"Start with 'Assalam-o-Alaikum {st.session_state.user_name}!' and then answer this: {prompt}"
                 st.session_state.has_greeted = True
 
             st.session_state.messages.append({"role": "user", "content": prompt})
@@ -127,7 +128,7 @@ else:
                     try:
                         with placeholder.container():
                             st.write("**Apna AI:**")
-                            # Note: Google Search Tool works best with non-streaming generate_content
+                            # Note: Google Search Tool works best without stream=True
                             if uploaded_file:
                                 img = Image.open(uploaded_file)
                                 response = model.generate_content([final_prompt, img])
@@ -146,9 +147,9 @@ else:
                             configure_next_key()
                             continue 
                         else:
-                            st.error(f"Error: {e}")
+                            st.error(f"GURU error: {e}")
                             break
                 
                 if not success:
-                    st.error("Apna AI is resting right now.")
-        
+                    st.error("Apna AI rest kar raha hai (API issues).")
+            
