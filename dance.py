@@ -4,15 +4,18 @@ from PIL import Image
 import time
 from datetime import datetime
 
-# --- 1. CONFIGURATION (Multi-API Key Setup) ---
-API_KEYS= st.secrets["API_KEYS"]
+# --- 1. CONFIGURATION ---
+API_KEYS = st.secrets["API_KEYS"]
 
-genai.configure(api_key=API_KEYS)
 if "key_index" not in st.session_state:
     st.session_state.key_index = 0
 
 if "user_name" not in st.session_state:
     st.session_state.user_name = None
+
+# Track if greeting has been sent
+if "has_greeted" not in st.session_state:
+    st.session_state.has_greeted = False
 
 def configure_next_key():
     st.session_state.key_index = (st.session_state.key_index + 1) % len(API_KEYS)
@@ -34,17 +37,16 @@ def get_best_model():
 
 best_model_name = get_best_model()
 
-# --- 3. PAGE UI & LOGIN LOGIC (Fixed for Keyboard Enter) ---
-st.set_page_config(page_title="GURU AI", page_icon="🤖")
+# --- 3. PAGE UI ---
+st.set_page_config(page_title="Apna AI", page_icon="🤖")
 
 if st.session_state.user_name is None:
-    st.title("🤖 Welcome to GURU AI")
+    st.title("🤖 Welcome to Apna AI")
     st.subheader("INTRODUCE YOURSELF")
     
-    # Form wrapping for Keyboard 'Enter' support
     with st.form("login_form", clear_on_submit=False):
         u_name = st.text_input("ENTER YOUR NAME:")
-        submit_button = st.form_submit_button("Enter GURU World")
+        submit_button = st.form_submit_button("Enter Apna AI World")
         
         if submit_button:
             if u_name.strip():
@@ -53,26 +55,23 @@ if st.session_state.user_name is None:
             else:
                 st.warning("Please Enter your name.")
 else:
-    # --- HEADER ---
-    st.markdown(f"# 🤖 **GURU AI**")
+    st.markdown(f"# 🤖 **Apna AI**")
     st.markdown(f"### **Welcome {st.session_state.user_name}**")
 
     # --- 4. SIDEBAR ---
     with st.sidebar:
-        st.header("GURU Settings")
+        st.header("Settings")
         st.info(f"User: {st.session_state.user_name}")
-        
         uploaded_file = st.file_uploader("Koi photo upload karein (Optional)", type=['png', 'jpg', 'jpeg'])
-        
-        if uploaded_file:
-            st.image(uploaded_file, caption="Selected Image", use_container_width=True)
         
         if st.button("Clear Chat History"):
             st.session_state.messages = []
+            st.session_state.has_greeted = False # Reset greeting too
             st.rerun()
         
-        if st.button("Logout / Change Name"):
+        if st.button("Logout"):
             st.session_state.user_name = None
+            st.session_state.has_greeted = False
             st.rerun()
 
     # --- 5. CHAT MEMORY ---
@@ -80,7 +79,7 @@ else:
         st.session_state.messages = []
 
     for message in st.session_state.messages:
-        display_name = "GURU" if message["role"] == "assistant" else st.session_state.user_name
+        display_name = "Apna AI" if message["role"] == "assistant" else st.session_state.user_name
         with st.chat_message(message["role"]):
             st.markdown(f"**{display_name}:** {message['content']}")
 
@@ -88,23 +87,31 @@ else:
     if not best_model_name:
         st.warning("Pehle apni API Key check karein.")
     else:
+        # Crucial for "Current Data" - Providing the specific context of 2026
         today_date = datetime.now().strftime("%A, %d %B %Y")
         
         model = genai.GenerativeModel(
             model_name=best_model_name,
             system_instruction=f"""
-            Aapka naam GURU hai aur aapko Tayyab ne banaya hai. 
-            Aaj ki sahi date {today_date} hai. 
-            CONTEXT: Guru ki maasi ka name Salomi hai.
+            Your name is Apna AI, created by Tayyab.
+            CRITICAL INFO: Today is {today_date}. It is the year 2026.
+            If asked about the US President or world leaders, use the data for the year 2026.
             Aap ek aqalmand ustad hain. Aap abhi {st.session_state.user_name} se baat kar rahe hain. 
             RULES:
-            1. Language Mirroring (Urdu/English mix).
-            2. Conciseness.
-            3. Greeting: 'Assalam-o-Alaikum {st.session_state.user_name}' (Only first time).
+            1. Language: Mix of Urdu/English (Roman Urdu).
+            2. Be concise.
+            3. Do NOT start with 'Assalam-o-Alaikum' yourself; the system will handle it if needed.
             """
         )
 
-        if prompt := st.chat_input(f"Boliye {st.session_state.user_name}, GURU se kya puchna hai?"):
+        if prompt := st.chat_input(f"Boliye {st.session_state.user_name}..."):
+            # --- FIXED GREETING LOGIC ---
+            final_prompt = prompt
+            if not st.session_state.has_greeted:
+                # Force the greeting only on the very first prompt
+                final_prompt = f"Start your response with 'Assalam-o-Alaikum {st.session_state.user_name}!' and then answer this: {prompt}"
+                st.session_state.has_greeted = True
+
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(f"**{st.session_state.user_name}:** {prompt}")
@@ -117,12 +124,13 @@ else:
                 for attempt in range(len(API_KEYS)):
                     try:
                         with placeholder.container():
-                            st.write("**GURU:**")
+                            st.write("**Apna AI:**")
                             if uploaded_file:
                                 img = Image.open(uploaded_file)
-                                response = model.generate_content([prompt, img], stream=True)
+                                # Use final_prompt which contains greeting logic
+                                response = model.generate_content([final_prompt, img], stream=True)
                             else:
-                                response = model.generate_content(prompt, stream=True)
+                                response = model.generate_content(final_prompt, stream=True)
                             
                             full_response = st.write_stream(chunk.text for chunk in response)
                         
@@ -135,8 +143,9 @@ else:
                             configure_next_key()
                             continue 
                         else:
-                            st.error(f"GURU THK GYA: {e}")
+                            st.error(f"Error: {e}")
                             break
                 
                 if not success:
-                    st.error("GURU REST KRNY LAGA.")
+                    st.error("Apna AI is currently resting.")
+        
