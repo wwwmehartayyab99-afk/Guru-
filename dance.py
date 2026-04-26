@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import time
 from datetime import datetime
 
 # --- 1. CONFIGURATION ---
@@ -13,7 +12,6 @@ if "key_index" not in st.session_state:
 if "user_name" not in st.session_state:
     st.session_state.user_name = None
 
-# Logic to track if greeting has been sent
 if "has_greeted" not in st.session_state:
     st.session_state.has_greeted = False
 
@@ -42,18 +40,12 @@ st.set_page_config(page_title="Apna AI", page_icon="🤖")
 
 if st.session_state.user_name is None:
     st.title("🤖 Welcome to Apna AI")
-    st.subheader("INTRODUCE YOURSELF")
-    
-    with st.form("login_form", clear_on_submit=False):
+    with st.form("login_form"):
         u_name = st.text_input("ENTER YOUR NAME:")
-        submit_button = st.form_submit_button("Enter Apna AI World")
-        
-        if submit_button:
+        if st.form_submit_button("Enter Apna AI World"):
             if u_name.strip():
                 st.session_state.user_name = u_name.strip()
                 st.rerun()
-            else:
-                st.warning("Please Enter your name.")
 else:
     st.markdown(f"# 🤖 **Apna AI**")
     st.markdown(f"### **Welcome {st.session_state.user_name}**")
@@ -61,14 +53,11 @@ else:
     # --- 4. SIDEBAR ---
     with st.sidebar:
         st.header("Settings")
-        st.info(f"User: {st.session_state.user_name}")
-        uploaded_file = st.file_uploader("Koi photo upload karein (Optional)", type=['png', 'jpg', 'jpeg'])
-        
-        if st.button("Clear Chat History"):
+        uploaded_file = st.file_uploader("Upload photo", type=['png', 'jpg', 'jpeg'])
+        if st.button("Clear Chat"):
             st.session_state.messages = []
             st.session_state.has_greeted = False 
             st.rerun()
-        
         if st.button("Logout"):
             st.session_state.user_name = None
             st.session_state.has_greeted = False
@@ -79,77 +68,55 @@ else:
         st.session_state.messages = []
 
     for message in st.session_state.messages:
-        display_name = "Apna AI" if message["role"] == "assistant" else st.session_state.user_name
+        role_name = "Apna AI" if message["role"] == "assistant" else st.session_state.user_name
         with st.chat_message(message["role"]):
-            st.markdown(f"**{display_name}:** {message['content']}")
+            st.markdown(f"**{role_name}:** {message['content']}")
 
     # --- 6. CHAT LOGIC ---
-    if not best_model_name:
-        st.warning("Pehle apni API Key check karein.")
-    else:
+    if best_model_name:
         today_date = datetime.now().strftime("%A, %d %B %Y")
         
-        # FIXED: Correct tool name to avoid 400 error
-        tools_config = [{"google_search": {}}]
-
+        # We use a very strong System Instruction to bypass the need for the search tool
         model = genai.GenerativeModel(
             model_name=best_model_name,
-            tools=tools_config, 
             system_instruction=f"""
             Your name is Apna AI, created by Tayyab.
-            CRITICAL: Today's date is {today_date}.
+            REALITY CHECK: Today is {today_date}. The year is 2026.
+            FACTS FOR 2026:
+            - US President: Donald Trump (Inaugurated Jan 2025).
+            - Iran President: Masoud Pezeshkian.
+            - Pakistan PM: Shehbaz Sharif.
+            
             Aap ek aqalmand ustad hain. Aap {st.session_state.user_name} se baat kar rahe hain. 
             RULES:
-            1. Use Google Search tool to find current world leaders or news for ANY country.
-            2. When you find the info, give a direct answer. Don't say "I don't have future data."
-            3. Language: Mix of Urdu/English (Roman Urdu).
-            4. Do NOT start with 'Assalam-o-Alaikum' yourself.
+            1. Never say "I don't know future results." Since it is 2026, these are past facts for you.
+            2. Language: Mix of Urdu/English (Roman Urdu).
+            3. Do NOT start with 'Assalam-o-Alaikum' yourself.
             """
         )
 
-        if prompt := st.chat_input(f"Boliye {st.session_state.user_name}..."):
-            # --- GREETING LOGIC ---
-            final_prompt = prompt
-            if not st.session_state.has_greeted:
-                # Forces greeting on the first message only
-                final_prompt = f"Start with 'Assalam-o-Alaikum {st.session_state.user_name}!' and then answer this: {prompt}"
-                st.session_state.has_greeted = True
-
+        if prompt := st.chat_input("Boliye..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(f"**{st.session_state.user_name}:** {prompt}")
 
             with st.chat_message("assistant"):
+                prefix = ""
+                if not st.session_state.has_greeted:
+                    prefix = f"Assalam-o-Alaikum {st.session_state.user_name}! "
+                    st.session_state.has_greeted = True
+
                 placeholder = st.empty()
-                full_response = ""
-                success = False
-                
-                for attempt in range(len(API_KEYS)):
-                    try:
-                        with placeholder.container():
-                            st.write("**Apna AI:**")
-                            # Note: Google Search Tool works best without stream=True
-                            if uploaded_file:
-                                img = Image.open(uploaded_file)
-                                response = model.generate_content([final_prompt, img])
-                            else:
-                                response = model.generate_content(final_prompt)
-                            
-                            full_response = response.text
-                            st.markdown(full_response)
-                        
-                        st.session_state.messages.append({"role": "assistant", "content": full_response})
-                        success = True
-                        break 
-                        
-                    except Exception as e:
-                        if "429" in str(e):
-                            configure_next_key()
-                            continue 
-                        else:
-                            st.error(f"GURU error: {e}")
-                            break
-                
-                if not success:
-                    st.error("Apna AI rest kar raha hai (API issues).")
+                try:
+                    if uploaded_file:
+                        img = Image.open(uploaded_file)
+                        response = model.generate_content([prompt, img])
+                    else:
+                        response = model.generate_content(prompt)
+                    
+                    full_response = prefix + response.text
+                    placeholder.markdown(full_response)
+                    st.session_state.messages.append({"role": "assistant", "content": full_response})
+                except Exception as e:
+                    st.error(f"Error: {e}")
             
