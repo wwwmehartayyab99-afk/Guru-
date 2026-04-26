@@ -66,7 +66,7 @@ else:
         
         if st.button("Clear Chat History"):
             st.session_state.messages = []
-            st.session_state.has_greeted = False # Reset greeting too
+            st.session_state.has_greeted = False 
             st.rerun()
         
         if st.button("Logout"):
@@ -87,29 +87,31 @@ else:
     if not best_model_name:
         st.warning("Pehle apni API Key check karein.")
     else:
-        # Crucial for "Current Data" - Providing the specific context of 2026
         today_date = datetime.now().strftime("%A, %d %B %Y")
         
+        # --- THE LIVE SEARCH LINE ---
+        tools_config = [{"google_search_retrieval": {}}]
+
         model = genai.GenerativeModel(
             model_name=best_model_name,
+            tools=tools_config, # This enables live Google Search
             system_instruction=f"""
             Your name is Apna AI, created by Tayyab.
-            CRITICAL INFO: Today is {today_date}. It is the year 2026.
-            If asked about the US President or world leaders, use the data for the year 2026.
-            Aap ek aqalmand ustad hain. Aap abhi {st.session_state.user_name} se baat kar rahe hain. 
+            Current Date: {today_date}.
+            Aap ek aqalmand ustad hain. Aap {st.session_state.user_name} se baat kar rahe hain. 
             RULES:
-            1. Language: Mix of Urdu/English (Roman Urdu).
-            2. Be concise.
-            3. Do NOT start with 'Assalam-o-Alaikum' yourself; the system will handle it if needed.
+            1. Use Google Search to find current world leaders or news for ANY country.
+            2. Language: Mix of Urdu/English (Roman Urdu).
+            3. Do NOT start with 'Assalam-o-Alaikum' yourself.
             """
         )
 
         if prompt := st.chat_input(f"Boliye {st.session_state.user_name}..."):
-            # --- FIXED GREETING LOGIC ---
+            # --- GREETING LOGIC ---
             final_prompt = prompt
             if not st.session_state.has_greeted:
-                # Force the greeting only on the very first prompt
-                final_prompt = f"Start your response with 'Assalam-o-Alaikum {st.session_state.user_name}!' and then answer this: {prompt}"
+                # Forces greeting on the first message only
+                final_prompt = f"Start with 'Assalam-o-Alaikum {st.session_state.user_name}!' and then answer: {prompt}"
                 st.session_state.has_greeted = True
 
             st.session_state.messages.append({"role": "user", "content": prompt})
@@ -125,14 +127,15 @@ else:
                     try:
                         with placeholder.container():
                             st.write("**Apna AI:**")
+                            # Note: Google Search Tool works best with non-streaming generate_content
                             if uploaded_file:
                                 img = Image.open(uploaded_file)
-                                # Use final_prompt which contains greeting logic
-                                response = model.generate_content([final_prompt, img], stream=True)
+                                response = model.generate_content([final_prompt, img])
                             else:
-                                response = model.generate_content(final_prompt, stream=True)
+                                response = model.generate_content(final_prompt)
                             
-                            full_response = st.write_stream(chunk.text for chunk in response)
+                            full_response = response.text
+                            st.markdown(full_response)
                         
                         st.session_state.messages.append({"role": "assistant", "content": full_response})
                         success = True
@@ -147,5 +150,5 @@ else:
                             break
                 
                 if not success:
-                    st.error("Apna AI is currently resting.")
+                    st.error("Apna AI is resting right now.")
         
